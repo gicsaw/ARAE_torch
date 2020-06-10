@@ -23,6 +23,8 @@ git clone https://github.com/gicsaw/ARAE_torch
 # Training data preparation :
 cd ARAE_torch
 
+### generate data
+
 python data_char.py
 
 ### trainning (skip)
@@ -45,3 +47,10 @@ conditional
 
 python CARAE_gen.py $logP $MW $QED
 
+### valid, unique, and novel check
+
+export PYTHONPATH="SA_Score directory":${PYTHONPATH}
+
+python valid.py result_CARAE_gen/epoch59
+
+output file: result_CARAE_gen/epoch59/smiles_novel.txt
