@@ -22,11 +22,14 @@ def accu(pred,val,batch_l):
     total=0
     cor_seq=0
     for i in range(0,batch_l.shape[0]):
-        mm=(pred[i,0:batch_l[i]].cpu().data.numpy() == val[i,0:batch_l[i]].cpu().data.numpy())
-        correct+=mm.sum()
-        total+=batch_l[i].sum()
-        cor_seq+=mm.all()
-
+        try:
+            mm=(pred[i,0:batch_l[i]].cpu().data.numpy() == val[i,0:batch_l[i]].cpu().data.numpy())
+            correct+=mm.sum()
+            total+=batch_l[i].sum()
+            cor_seq+=mm.all()
+        except:
+            print(pred[i,0:batch_l[i]].cpu().data.numpy(), val[i,0:batch_l[i]].cpu().data.numpy())
+            return 0, 0
 
     acc=correct/float(total)
     acc2=cor_seq/batch_l.shape[0]
@@ -67,6 +70,7 @@ class UserDataset(Dataset):
         self.Pdata=torch.tensor(np.concatenate(
             [Pdata_reg0[:,0:1],Pdata_reg0[:,3:4],Pdata_reg0[:,2:3]],
             axis=1),dtype=torch.float32)
+        #logP MW QED 
         self.len = self.Xdata.shape[0]
 
     def __getitem__(self,index):
@@ -81,13 +85,13 @@ def main():
 
     datadir="data"
     Nfea=len(char_list)
-#    train_data = UserDataset(datadir,"train")
-    train_data = UserDataset(datadir,"test")
+    train_data = UserDataset(datadir,"train")
+#    train_data = UserDataset(datadir,"test")
     test_data = UserDataset(datadir,"test")
 
     Ntrain=len(train_data)
     Ntest=len(test_data)
-
+    print(Ntrain, Ntest)
     Nseq=110
     Ncla=0
     Nreg=3
@@ -98,9 +102,9 @@ def main():
     NLSTM_layer=1
     batch_size=100
 
-    conf=0.5
+#    conf=0.5
 
-    use_cuda= torch.cuda.is_available()
+    use_cuda = torch.cuda.is_available()
     if use_cuda==True:
         device_num=torch.cuda.current_device()
         print(device_num)
@@ -369,6 +373,7 @@ def main():
         loss_cri_test = loss_cri_test_sum/Ntest
 
         acc, acc2= accu(out_num_AE,batch_x2,batch_l)
+        print("reconstruction accuracy:", acc,acc2)
 
         line_out="%d test: AE %6.3f gen %6.3f cri %6.3f real %6.3f pre_cla %6.3f pre_reg %6.3f " %(epoch,
                 loss_AE_test, loss_gen_test, loss_cri_test, loss_real_test,

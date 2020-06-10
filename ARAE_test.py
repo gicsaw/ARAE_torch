@@ -84,11 +84,8 @@ def main():
 
     datadir="data"
     Nfea=len(char_list)
-    train_data = UserDataset(datadir,"train")
-#    train_data = UserDataset(datadir,"test")
     test_data = UserDataset(datadir,"test")
 
-    Ntrain=len(train_data)
     Ntest=len(test_data)
 
     Nseq=110
@@ -115,17 +112,16 @@ def main():
             'seed_dim':seed_dim,'NLSTM_layer':NLSTM_layer,'device':device}
 
     model=ARAE.Net(para)
+    model.to(device)
 
     save_dir="save_ARAE"
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
 
-    start_epoch=0
-    path=save_dir+"/save_%d.pth" %start_epoch
-#    model=torch.load(path)
-#    model.load_state_dict(torch.load(path))
+    save_result_dir="result_ARAE"
+    if not os.path.exists(save_result_dir):
+        os.makedirs(save_result_dir)
 
-    model.to(device)
 
     total_st = time.time()
 
@@ -139,107 +135,25 @@ def main():
     optimizer_cri = optim.Adam(model.Cri.parameters(), lr=0.000002)
 
 
-    N_batch=int(Ntrain/batch_size)
-    print(N_batch,Ntrain)
-
-    std0=0.2
-    std00=0.02
+    std0=0.0
+    std=0.0
     std_seed=0.25
     std_decay_ratio=0.99
     mean0=torch.zeros(batch_size,hidden_dim)
     mean_seed=torch.zeros(batch_size,seed_dim)
 
-    Ngan=4
-    Ncri=5
-    for epoch in range(start_epoch,90):
-#        if epoch<2:
-#            Ngan=2
-#        elif epoch<4:
-#            Ngan=3
-#        elif epoch<6:
-#            Ngan=4
+#    epoch_list=[9]
+    epoch_list=[9,19,29,39,49,59,69,79,89]
 
-        running_loss_AE=0.0
-        running_loss_gen=0.0
-        running_loss_cri=0.0
+    for epoch in epoch_list:
+        path=save_dir+"/save_%d.pth" %epoch
+        model=torch.load(path)
+        model.to(device)
 
         st=time.time()
-
-        std=std0*np.power(std_decay_ratio,epoch) + std00
-        print("std:", std)
-
-        train_loader=DataLoader(dataset=train_data,batch_size=batch_size,
-            shuffle=True, drop_last=True, num_workers=2)
-        Ntrain_batch=len(train_loader)
-        model.train()
-        for i, data in enumerate(train_loader):
-
-            batch_x, batch_l = data
-            batch_x     = batch_x.to(device)
-            batch_l     = batch_l.to(device)
-
-            batch_x2 = batch_x[:,1:]
-
-            optimizer_AE.zero_grad()
-            noise = torch.normal(mean=mean0,std=std).to(device)
-            out_decoding = model.AE(batch_x, batch_l, noise)
-            out2 = out_decoding[:,:-1]
-            loss_AE=criterion_AE(out2.reshape(-1,Nfea),batch_x2.reshape(-1))
-            loss_AE.backward(retain_graph=True)
-            optimizer_AE.step()
-            running_loss_AE+=loss_AE.data
-#            out_decoding_sf=torch.softmax(out_decoding,dim=2)
-
-
-            Z_real=model.Enc(batch_x,batch_l)
-
-            for i_gan in range(0,Ngan):
-                for i_cri in range(0,Ncri):
-
-                    batch_s=torch.normal(mean=mean_seed,std=std_seed).to(device)
-                    Z_gen=model.Gen(batch_s)
-                    D_gen=model.Cri(Z_gen)
-                    D_real=model.Cri(Z_real)
-
-                    optimizer_cri.zero_grad()
-                    loss_cri= - D_real.mean() + D_gen.mean()
-                    loss_cri.backward(retain_graph=True)
-                    optimizer_cri.step()
-                    running_loss_cri+=loss_cri.data/(Ncri*Ngan)
-                    model.Cri.clip(0.01)
-
-                batch_s=torch.normal(mean=mean_seed,std=std_seed).to(device)
-                Z_gen=model.Gen(batch_s)
-                D_gen=model.Cri(Z_gen)
-
-                optimizer_gen.zero_grad()
-                loss_gen= - D_gen.mean()
-                loss_gen.backward(retain_graph=True)
-                optimizer_gen.step()
-                running_loss_gen+=loss_gen.data/Ngan
-
-            if i%50 != 49 :
-                continue
-            _,out_num_AE= torch.max(out_decoding,2)
-            acc, acc2= accu(out_num_AE,batch_x2,batch_l)
-            print("reconstruction accuracy:", acc,acc2)
-
-            out_num_ARAE=model.Dec.decoding(Z_gen)
-
-            for k in range(0,2):
-                out_string=vec_to_char(batch_x2[k])
-                print("real: ",out_string)
-                out_string=vec_to_char(out_num_AE[k])
-                print("AE  : ",out_string)
-            for k in range(0,10):
-                out_string=vec_to_char(out_num_ARAE[k])
-                print("ARAE: ",out_string)
-
-        line_out="%d train loss: AE %6.3f cri %6.3f gen %6.3f" %(epoch,
-                    running_loss_AE/Ntrain_batch,
-                   running_loss_cri/Ntrain_batch,
-                   running_loss_gen/Ntrain_batch)
-        print(line_out)
+        save_result_dir2=save_result_dir+"/epoch%d" %epoch
+        if not os.path.exists(save_result_dir2):
+            os.makedirs(save_result_dir2)
 
         loss_sum=[]
         loss_AE_test_sum=0
@@ -247,7 +161,10 @@ def main():
         loss_real_test_sum=0
         loss_cri_test_sum=0
 
-        st=time.time()
+        file_ARAE=save_result_dir2+"/ARAE_smiles.txt"
+        file_AE=save_result_dir2+"/AE_smiles.txt"
+        fp_ARAE=open(file_ARAE,"w")
+        fp_AE=open(file_AE,"w")
 
         test_loader=DataLoader(dataset=test_data,batch_size=batch_size,
             shuffle=False, drop_last=False, num_workers=2)
@@ -286,6 +203,22 @@ def main():
 
             out_num_ARAE=model.Dec.decoding(Z_gen)
 
+            for k in range(0,2):
+                out_string=vec_to_char(batch_x2[k])
+                print("real: ",out_string)
+                out_string=vec_to_char(out_num_AE[k])
+                print("AE  : ",out_string)
+            for k in range(0,10):
+                out_string=vec_to_char(out_num_ARAE[k])
+                print("ARAE: ",out_string)
+
+            for k in range(0,b_size):
+                line_ARAE=vec_to_char(out_num_ARAE[k])+"\n"
+                fp_ARAE.write(line_ARAE)
+                line_AE=vec_to_char(out_num_AE[k])+"\n"
+                fp_AE.write(line_AE)
+        fp_ARAE.close()
+        fp_AE.close()
 
         loss_AE_test      = loss_AE_test_sum/Ntest
         loss_gen_test = loss_gen_test_sum/Ntest

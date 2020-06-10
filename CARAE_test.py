@@ -22,10 +22,14 @@ def accu(pred,val,batch_l):
     total=0
     cor_seq=0
     for i in range(0,batch_l.shape[0]):
-        mm=(pred[i,0:batch_l[i]].cpu().data.numpy() == val[i,0:batch_l[i]].cpu().data.numpy())
-        correct+=mm.sum()
-        total+=batch_l[i].sum()
-        cor_seq+=mm.all()
+        try:
+            mm=(pred[i,0:batch_l[i]].cpu().data.numpy() == val[i,0:batch_l[i]].cpu().data.numpy())
+            correct+=mm.sum()
+            total+=batch_l[i].sum()
+            cor_seq+=mm.all()
+        except:
+            print(pred[i,0:batch_l[i]].cpu().data.numpy(), val[i,0:batch_l[i]].cpu().data.numpy())
+            return 0, 0
 
 
     acc=correct/float(total)
@@ -91,7 +95,7 @@ def main():
     Nprop=Ncla+Nreg
 
     hidden_dim=300
-    seed_dim=100
+    seed_dim=hidden_dim
     NLSTM_layer=1
     batch_size=100
 
@@ -113,6 +117,7 @@ def main():
             'seed_dim':seed_dim,'NLSTM_layer':NLSTM_layer,'device':device}
 
     model=CARAE.Net(para)
+    model.to(device)
 
     save_dir="save_CARAE"
     if not os.path.exists(save_dir):
@@ -122,10 +127,8 @@ def main():
     if not os.path.exists(save_result_dir):
         os.makedirs(save_result_dir)
 
-    model.to(device)
 
     total_st = time.time()
-
 
     criterion_AE = nn.CrossEntropyLoss()
     criterion_Pre_cla = nn.CrossEntropyLoss()
@@ -152,9 +155,11 @@ def main():
     mean_seed=torch.zeros(batch_size,seed_dim)
 
 #    Ptest_cla=test_data.Pdata_cla.cpu().data.numpy()
-    Ptest_reg=test_data.Pdata.cpu().data.numpy()
+#    Ptest=test_data.Pdata.cpu().data.numpy()
 
+#    epoch_list=[9]
     epoch_list=[9,19,29,39,49,59,69,79,89]
+
     for epoch in epoch_list:
         path=save_dir+"/save_%d.pth" %epoch
         model=torch.load(path)
@@ -237,7 +242,6 @@ def main():
 
             out_num_ARAE=model.Dec.decoding(Z_gen,batch_p)
 
-
             for k in range(0,2):
                 out_string=vec_to_char(batch_x2[k])
                 print("real: ",out_string)
@@ -247,10 +251,10 @@ def main():
                 out_string=vec_to_char(out_num_ARAE[k])
                 print("ARAE: ",out_string)
 
-            for k in range(0,bsize):
+            for k in range(0,b_size):
                 line_ARAE=vec_to_char(out_num_ARAE[k])+"\n"
                 fp_ARAE.write(line_ARAE)
-                line_AE=vec_to_char(out_num_AE[k])+" %6.3f\n" %Ptest[mm][k][0]
+                line_AE=vec_to_char(out_num_AE[k])+"\n"
                 fp_AE.write(line_AE)
         fp_ARAE.close()
         fp_AE.close()

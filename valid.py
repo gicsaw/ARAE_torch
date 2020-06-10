@@ -41,7 +41,7 @@ def check_validity(q,return_dict_valid):
         idx, smi0 = qqq
 
         index=smi0.find('>')
-        smi=smi0[0:index]
+        smi=smi0[0:index].strip('<')
 
         if idx%10000==0:
             print(idx)
@@ -235,7 +235,8 @@ def main():
 
     file_output3=data_dir+"/smiles_novel.txt"
     fp_out3=open(file_output3,"w")
-
+    line_out='#SMILES logP SAS QED MW TPSA\n'
+    fp_out3.write(line_out)
     keys=sorted(return_dict_prop.keys())
 
     for key in keys:

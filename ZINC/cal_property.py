@@ -16,7 +16,7 @@ from rdkit.Chem.rdMolDescriptors import CalcNumHBA
 from rdkit.Chem.rdMolDescriptors import CalcTPSA
 
 from rdkit.Chem.QED import qed
-sys.path.insert(0,'/Arontier/People/shhong/SA_Score')
+#sys.path.insert(0,'/home/shade/SA_Score')
 import sascorer
 
 
