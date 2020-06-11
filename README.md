@@ -23,6 +23,8 @@ git clone https://github.com/gicsaw/ARAE_torch
 # Training data preparation :
 cd ARAE_torch
 
+### generate data
+
 python data_char.py
 
 ### trainning (skip)
@@ -44,4 +46,17 @@ python ARAE_gen.py
 conditional
 
 python CARAE_gen.py $logP $MW $QED
+
+### valid, unique, and novel check
+
+export PYTHONPATH="SA_Score directory":${PYTHONPATH}
+
+python valid.py result_CARAE_gen/epoch59
+
+output file: result_CARAE_gen/epoch59/smiles_novel.txt
+
+
+
+# References:
+Hong, S. H., Ryu, S., Lim, J., & Kim, W. Y. (2019). Molecular Generative Model Based On Adversarially Regularized Autoencoder. Journal of Chemical Information and Modeling.
 
