@@ -182,7 +182,7 @@ def main():
             batch_x2 = batch_x[:, 1:]
             b_size = batch_x.shape[0]
 
-            noise = mean0
+            noise = mean0.to(device)
             out_decoding = model.AE(batch_x, batch_l, noise)
             out2 = out_decoding[:, :-1]
             _, out_num_AE = torch.max(out_decoding, 2)
